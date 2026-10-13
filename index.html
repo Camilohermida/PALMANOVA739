@@ -85,6 +85,9 @@
   .upload-box:hover{border-color:var(--verde);}
   .upload-box input{display:none;}
   .upload-icon{font-size:20px; margin-bottom:4px; display:block;}
+  .gal-btn{display:block; width:100%; margin-top:6px; padding:9px 8px; border:1px solid var(--gris-borde); border-radius:10px; background:#fff; color:var(--grafito); font-family:'Inter',sans-serif; font-size:12px; font-weight:500; cursor:pointer;}
+  .gal-btn:hover{border-color:var(--verde);}
+  .gal-input{display:none;}
   .upload-text{font-size:11.5px; font-weight:500; color:var(--grafito); line-height:1.3;}
   .upload-scan-label{
     font-size:9.5px; letter-spacing:1px; text-transform:uppercase; color:var(--verde);
@@ -183,8 +186,10 @@
             <span class="upload-icon">📷</span>
             <span class="upload-text">Escanear frente</span>
             <span class="upload-scan-label">Toca para abrir cámara</span>
-            <input type="file" class="doc-frente-input" accept="image/*" capture="environment" required>
+            <input type="file" class="doc-frente-input" accept="image/*" capture="environment">
           </label>
+          <button type="button" class="gal-btn">🖼️ Adjuntar desde galería</button>
+          <input type="file" class="gal-input" accept="image/*">
           <img class="preview-img doc-frente-preview">
           <button type="button" class="doc-clear doc-frente-clear">Quitar</button>
         </div>
@@ -195,8 +200,10 @@
             <span class="upload-icon">📷</span>
             <span class="upload-text">Escanear reverso</span>
             <span class="upload-scan-label">Toca para abrir cámara</span>
-            <input type="file" class="doc-reverso-input" accept="image/*" capture="environment" required>
+            <input type="file" class="doc-reverso-input" accept="image/*" capture="environment">
           </label>
+          <button type="button" class="gal-btn">🖼️ Adjuntar desde galería</button>
+          <input type="file" class="gal-input" accept="image/*">
           <img class="preview-img doc-reverso-preview">
           <button type="button" class="doc-clear doc-reverso-clear">Quitar</button>
         </div>
@@ -382,7 +389,17 @@ document.getElementById('reserva-card').innerHTML = `
   <div class="reserva-row"><span class="k">Check-in</span><span class="v">${CONFIG.CHECKIN}</span></div>
   <div class="reserva-row"><span class="k">Check-out</span><span class="v">${CONFIG.CHECKOUT}</span></div>
 `;
-document.getElementById('form-content').style.display = 'block';
+const REG_KEY = 'blum_registro_' + CONFIG.PROPIEDAD;
+function yaRegistrado(){ try{ return localStorage.getItem(REG_KEY) === '1'; }catch(e){ return false; } }
+function marcarRegistrado(){ try{ localStorage.setItem(REG_KEY, '1'); }catch(e){} }
+if(yaRegistrado()){
+  fillWelcomeInfo();
+  document.getElementById('success-content').style.display = 'block';
+  const sw0 = document.getElementById('success-wrap');
+  if(sw0) sw0.style.display = 'none';
+}else{
+  document.getElementById('form-content').style.display = 'block';
+}
 
 let acompanantesCount = 0;
 let docFrenteFile = null;
@@ -390,7 +407,11 @@ let docReversoFile = null;
 
 /* ---------- subida documento principal ---------- */
 function setupUpload(inputEl, previewEl, clearEl, onSet){
-  inputEl.addEventListener('change', (e) => {
+  const field = inputEl.closest('.field');
+  const galInput = field.querySelector('.gal-input');
+  const galBtn = field.querySelector('.gal-btn');
+  galBtn.addEventListener('click', () => galInput.click());
+  function handle(e){
     const file = e.target.files[0];
     if(!file) return;
     onSet(file);
@@ -401,9 +422,12 @@ function setupUpload(inputEl, previewEl, clearEl, onSet){
       clearEl.style.display = 'block';
     };
     reader.readAsDataURL(file);
-  });
+  }
+  inputEl.addEventListener('change', handle);
+  galInput.addEventListener('change', handle);
   clearEl.addEventListener('click', () => {
     inputEl.value = '';
+    galInput.value = '';
     previewEl.style.display = 'none';
     clearEl.style.display = 'none';
     onSet(null);
@@ -450,8 +474,10 @@ function addAcompanante(){
           <span class="upload-icon">📷</span>
           <span class="upload-text">Escanear frente</span>
           <span class="upload-scan-label">Toca para abrir cámara</span>
-          <input type="file" class="acomp-doc-frente-input" accept="image/*" capture="environment" required>
+          <input type="file" class="acomp-doc-frente-input" accept="image/*" capture="environment">
         </label>
+        <button type="button" class="gal-btn">🖼️ Adjuntar desde galería</button>
+        <input type="file" class="gal-input" accept="image/*">
         <img class="preview-img acomp-doc-frente-preview">
         <button type="button" class="doc-clear acomp-doc-frente-clear">Quitar</button>
       </div>
@@ -462,8 +488,10 @@ function addAcompanante(){
           <span class="upload-icon">📷</span>
           <span class="upload-text">Escanear reverso</span>
           <span class="upload-scan-label">Toca para abrir cámara</span>
-          <input type="file" class="acomp-doc-reverso-input" accept="image/*" capture="environment" required>
+          <input type="file" class="acomp-doc-reverso-input" accept="image/*" capture="environment">
         </label>
+        <button type="button" class="gal-btn">🖼️ Adjuntar desde galería</button>
+        <input type="file" class="gal-input" accept="image/*">
         <img class="preview-img acomp-doc-reverso-preview">
         <button type="button" class="doc-clear acomp-doc-reverso-clear">Quitar</button>
       </div>
@@ -592,9 +620,11 @@ document.getElementById('submit-email').addEventListener('click', async () => {
     const data = await res.json();
 
     if(data.success){
+      marcarRegistrado();
       document.getElementById('form-content').style.display = 'none';
       fillWelcomeInfo();
       document.getElementById('success-content').style.display = 'block';
+      window.scrollTo(0,0);
       setTimeout(() => {
         const sw = document.getElementById('success-wrap');
         sw.style.maxHeight = sw.scrollHeight + 'px';
